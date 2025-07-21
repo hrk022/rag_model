@@ -1,8 +1,8 @@
 streamlit
-langchain>=0.1.0
+langchain>=0.1.17
 langchain-community>=0.0.20
 chromadb>=0.4.24
 sentence-transformers
-PyPDF2  # for PyPDFLoader
-ollama  # needed to interact with ChatOllama
-uuid  # built-in, no need to install, included for completeness
+PyPDF2
+ollama
+
