@@ -1,9 +1,10 @@
 streamlit
 langchain>=0.1.17
 langchain-community>=0.0.20
-chromadb>=0.4.24
+faiss-cpu
 sentence-transformers
-pypdf  # <--- the correct PDF library
+pypdf
 ollama
+
 
 
