@@ -1,8 +1,8 @@
 import streamlit as st
-from langchain.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain_community.chat_models import ChatOllama
 from langchain.callbacks.base import BaseCallbackHandler
@@ -46,9 +46,7 @@ def process_pdf(upload):
     splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     chunks = splitter.split_documents(docs)
     embedding = HuggingFaceEmbeddings()
-    vector_dir = f"pdf_vector/{uuid.uuid4()}"
-    vectorstore = Chroma.from_documents(chunks, embedding=embedding, persist_directory=vector_dir)
-    vectorstore.persist()
+    vectorstore = FAISS.from_documents(chunks, embedding=embedding)
     return vectorstore.as_retriever()
 
 # --- Handle Upload ---
