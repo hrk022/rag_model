@@ -3,6 +3,7 @@ langchain>=0.1.17
 langchain-community>=0.0.20
 chromadb>=0.4.24
 sentence-transformers
-PyPDF2
+pypdf  # <--- the correct PDF library
 ollama
+
 
