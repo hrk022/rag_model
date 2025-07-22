@@ -13,8 +13,8 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.callbacks.base import BaseCallbackHandler
   # ✅ Import from your Python file
 
-load_dotenv()  # Load .env file first
-api_key = os.getenv("OPENAI_API_KEY")  # Now this is defined
+load_dotenv()
+api_key = os.environ["OPENAI_API_KEY"]  # Now this is defined
 
 os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
 
