@@ -1,10 +1,11 @@
 streamlit
-langchain>=0.1.17
-langchain-community>=0.0.20
-faiss-cpu
+python-dotenv
+langchain
+langchain-community
+PyPDF2
 sentence-transformers
-pypdf
-ollama
+faiss-cpu
+
 
 
 
