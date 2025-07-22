@@ -5,6 +5,7 @@ langchain-community
 pypdf
 sentence-transformers
 faiss-cpu
+openai
 
 
 
