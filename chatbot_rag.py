@@ -1,25 +1,37 @@
+import os
 import streamlit as st
+from dotenv import load_dotenv
+
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQA
-from langchain_community.chat_models import ChatOllama
+
+from langchain.chat_models import ChatOpenAI
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
 from langchain.callbacks.base import BaseCallbackHandler
-import os
-import uuid
+  # ✅ Import from your Python file
 
-st.set_page_config(page_title="📄 Streaming PDF Chat")
+# Load environment from the custom file
+load_dotenv(dotenv_path="my_api.env")
 
-# --- Callback to stream token-by-token ---
+# Get the token from the environment
+api_key = os.getenv("OPENAI_API_KEY")
+
+# These two names MUST be exactly this way
+os.environ["OPENAI_API_KEY"] = api_key
+os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
+
+# --- Stream Handler for live output ---
 class StreamHandler(BaseCallbackHandler):
     def __init__(self, container):
         self.container = container
         self.text = ""
 
-    def on_llm_new_token(self, token: str, **kwargs) -> None:
+    def on_llm_new_token(self, token: str, **kwargs):
         self.text += token
-        self.container.markdown(self.text + "▌")  # Typing cursor effect
+        self.container.markdown(self.text + "▌")
 
 # --- Session State ---
 if "chat_history" not in st.session_state:
@@ -28,33 +40,59 @@ if "chat_history" not in st.session_state:
 if "qa_chain" not in st.session_state:
     st.session_state.qa_chain = None
 
-# --- Sidebar Upload ---
-st.sidebar.title("📤 Upload PDF")
-upload_file = st.sidebar.file_uploader("Choose a PDF", type=["pdf"])
+if "retriever" not in st.session_state:
+    st.session_state.retriever = None
 
-# --- PDF Processing ---
+# --- Sidebar: Upload PDF ---
+st.sidebar.title("Upload PDF")
+upload_file = st.sidebar.file_uploader("Choose a PDF", type="pdf")
+
+# --- Process Uploaded PDF ---
 def process_pdf(upload):
-    temp_folder = "temp"
-    os.makedirs(temp_folder, exist_ok=True)
-    pdf_path = os.path.join(temp_folder, upload.name)
-
-    with open(pdf_path, "wb") as f:
+    path = os.path.join("temp", upload.name)
+    os.makedirs("temp", exist_ok=True)
+    with open(path, "wb") as f:
         f.write(upload.read())
 
-    loader = PyPDFLoader(pdf_path)
+    loader = PyPDFLoader(path)
     docs = loader.load()
-    splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-    chunks = splitter.split_documents(docs)
-    embedding = HuggingFaceEmbeddings()
-    vectorstore = FAISS.from_documents(chunks, embedding=embedding)
+
+    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    chunks = text_splitter.split_documents(docs)
+
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    vectorstore = FAISS.from_documents(chunks, embedding=embeddings)
+
+    st.sidebar.write("Sample content:", docs[0].page_content[:500])
     return vectorstore.as_retriever()
 
-# --- Handle Upload ---
+# --- Title ---
+st.title("🤖 Chat with Your PDF (RAG_MODEL)")
+
+# --- Initialize Chain ---
 if upload_file and st.session_state.qa_chain is None:
-    with st.spinner("Processing PDF..."):
+    with st.spinner("Processing PDF and loading model..."):
         retriever = process_pdf(upload_file)
-        llm = ChatOllama(model="llama3", streaming=True)
-        st.session_state.qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
+
+        llm = ChatOpenAI(
+            model_name="llama3-70b-8192",
+            temperature=0,
+            streaming=True,
+            openai_api_key=api_key,
+            openai_api_base="https://api.groq.com/openai/v1"
+        )
+
+        memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
+        qa_chain = ConversationalRetrievalChain.from_llm(
+            llm=llm,
+            retriever=retriever,
+            memory=memory,
+            return_source_documents=False
+        )
+
+        st.session_state.retriever = retriever
+        st.session_state.qa_chain = qa_chain
 
 # --- Chat UI ---
 if st.session_state.qa_chain:
@@ -64,14 +102,17 @@ if st.session_state.qa_chain:
         st.session_state.chat_history.append(("user", user_query))
         st.chat_message("user").markdown(user_query)
 
-        # Streaming response
         with st.chat_message("assistant"):
-            response_container = st.empty()
-            stream_handler = StreamHandler(response_container)
+            response_placeholder = st.empty()
+            stream_handler = StreamHandler(response_placeholder)
 
-            result = st.session_state.qa_chain.run(user_query, callbacks=[stream_handler])
-            st.session_state.chat_history.append(("assistant", result))
+            result = st.session_state.qa_chain.invoke(
+                {"question": user_query},
+                config={"callbacks": [stream_handler]}
+            )
 
-    # Chat history
-    for sender, msg in st.session_state.chat_history[:-1]:  # exclude last since it's already printed
+            answer = result.get("answer", "") if isinstance(result, dict) else result
+            st.session_state.chat_history.append(("assistant", answer))
+
+    for sender, msg in st.session_state.chat_history[:-1]:
         st.chat_message(sender).markdown(msg)
