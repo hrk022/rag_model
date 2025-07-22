@@ -11,7 +11,6 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain.callbacks.base import BaseCallbackHandler
-import openai
   # ✅ Import from your Python file
 
 load_dotenv()  # Load .env file first
