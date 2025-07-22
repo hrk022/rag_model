@@ -11,16 +11,12 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain.callbacks.base import BaseCallbackHandler
+import openai
   # ✅ Import from your Python file
 
-# Load environment from the custom file
-load_dotenv(dotenv_path="my_api.env")
+load_dotenv()  # Load .env file first
+api_key = os.getenv("OPENAI_API_KEY")  # Now this is defined
 
-# Get the token from the environment
-api_key = os.getenv("OPENAI_API_KEY")
-
-# These two names MUST be exactly this way
-os.environ["OPENAI_API_KEY"] = api_key
 os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
 
 # --- Stream Handler for live output ---
@@ -78,7 +74,7 @@ if upload_file and st.session_state.qa_chain is None:
             model_name="llama3-70b-8192",
             temperature=0,
             streaming=True,
-            openai_api_key=api_key,
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
             openai_api_base="https://api.groq.com/openai/v1"
         )
 
