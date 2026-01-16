@@ -1,12 +1,14 @@
 streamlit
 python-dotenv
+
 langchain
 langchain-community
-pypdf
-sentence-transformers
-faiss-cpu
-openai
+langchain-text-splitters
+langchain-openai
 
+faiss-cpu
+sentence-transformers
+pypdf
 
 
 
