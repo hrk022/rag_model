@@ -2,10 +2,11 @@ streamlit
 python-dotenv
 openai
 pypdf
-faiss-cpu
 sentence-transformers
-# LangChain dependencies
-langchain>=0.3.0
-langchain-community>=0.3.0
+# Critical: Install langchain main package explicitly
+langchain
+langchain-community
 langchain-openai
 langchain-text-splitters
+# Vector Store
+faiss-cpu
