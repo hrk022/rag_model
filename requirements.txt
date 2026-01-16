@@ -9,6 +9,8 @@ langchain-openai
 faiss-cpu
 sentence-transformers
 pypdf
+langchain-core
+
 
 
 
