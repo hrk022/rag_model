@@ -9,7 +9,7 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
 from langchain_openai import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
+from langchain_core.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain.callbacks.base import BaseCallbackHandler
 
@@ -113,4 +113,5 @@ if st.session_state.qa_chain:
 
     for sender, msg in st.session_state.chat_history[:-1]:
         st.chat_message(sender).markdown(msg)
+
 
