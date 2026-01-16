@@ -3,10 +3,8 @@ python-dotenv
 openai
 pypdf
 sentence-transformers
-# Critical: Install langchain main package explicitly
-langchain
-langchain-community
-langchain-openai
+langchain==0.1.20
+langchain-community==0.0.38
+langchain-openai==0.1.6
 langchain-text-splitters
-# Vector Store
 faiss-cpu
