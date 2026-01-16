@@ -2,15 +2,17 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 
+
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_text_splitters import CharacterTextSplitter
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain.callbacks.base import BaseCallbackHandler
+
   # ✅ Import from your Python file
 
 load_dotenv()
@@ -111,3 +113,4 @@ if st.session_state.qa_chain:
 
     for sender, msg in st.session_state.chat_history[:-1]:
         st.chat_message(sender).markdown(msg)
+
