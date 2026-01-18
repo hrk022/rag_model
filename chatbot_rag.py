@@ -1,6 +1,28 @@
 import os
+import sys
+import subprocess
 import streamlit as st
 from dotenv import load_dotenv
+
+# --- DIAGNOSTICS: Verify LangChain Installation ---
+try:
+    import langchain
+    import langchain_community
+    import langchain_groq
+except ImportError as e:
+    st.error(f"⚠️ Critical Dependence Missing: {e}")
+    st.info("Attempting to fix environment automatically... This may take a minute.")
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "langchain", "langchain-community", "langchain-groq", "pymupdf", "faiss-cpu", "sentence-transformers"])
+        st.success("✅ Dependencies installed! Please click 'Rerun' or refresh the page.")
+        st.stop()
+    except Exception as install_err:
+        st.error(f"❌ Automatic fix failed: {install_err}")
+        st.write("Current Environment Packages:")
+        result = subprocess.run([sys.executable, "-m", "pip", "list"], capture_output=True, text=True)
+        st.code(result.stdout)
+        st.stop()
+# --------------------------------------------------
 
 
 from langchain_community.document_loaders import PyMuPDFLoader
