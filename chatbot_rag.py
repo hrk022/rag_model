@@ -17,7 +17,15 @@ from langchain.callbacks.base import BaseCallbackHandler
   # ✅ Import from your Python file
 
 load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")  # Now this is defined
+api_key = os.getenv("OPENAI_API_KEY") 
+
+# Validate API Key
+if not api_key:
+    st.error("❌ API Key is missing! Please set OPENAI_API_KEY in your .env file or Streamlit secrets.")
+    st.stop()
+if not api_key.startswith("gsk_"):
+    st.error("❌ Invalid API Key for Groq! The key must start with `gsk_`. You seem to be using an OpenAI key (`sk-...`). Please get a Groq key from console.groq.com.")
+    st.stop()
 
 # os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1" # Not needed for ChatGroq
 
