@@ -5,15 +5,27 @@ import streamlit as st
 from dotenv import load_dotenv
 
 # --- DIAGNOSTICS: Verify LangChain Installation ---
+# --- DIAGNOSTICS: Verify LangChain Installation ---
 try:
     import langchain
     import langchain_community
     import langchain_groq
+    # CRITICAL CHECK: Verify submodules exist
+    from langchain.memory import ConversationBufferMemory
+    from langchain_groq import ChatGroq
+    from langchain_community.document_loaders import PyMuPDFLoader
 except ImportError as e:
-    st.error(f"⚠️ Critical Dependence Missing: {e}")
+    st.error(f"⚠️ Critical Module Missing: {e}")
     st.info("Attempting to fix environment automatically... This may take a minute.")
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "langchain", "langchain-community", "langchain-groq", "pymupdf", "faiss-cpu", "sentence-transformers"])
+        # Force install the specific versions we need
+        subprocess.check_call([sys.executable, "-m", "pip", "install", 
+                               "langchain", 
+                               "langchain-community", 
+                               "langchain-groq", 
+                               "pymupdf", 
+                               "faiss-cpu", 
+                               "sentence-transformers"])
         st.success("✅ Dependencies installed! Please click 'Rerun' or refresh the page.")
         st.stop()
     except Exception as install_err:
