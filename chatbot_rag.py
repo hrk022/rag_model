@@ -4,37 +4,32 @@ import subprocess
 import streamlit as st
 from dotenv import load_dotenv
 
-# --- DIAGNOSTICS: Verify LangChain Installation ---
-# --- DIAGNOSTICS: Verify LangChain Installation ---
+# --- FAIL-SAFE DEPENDENCY CHECK ---
 try:
     import langchain
     import langchain_community
     import langchain_groq
-    # CRITICAL CHECK: Verify submodules exist
     from langchain.memory import ConversationBufferMemory
     from langchain_groq import ChatGroq
     from langchain_community.document_loaders import PyMuPDFLoader
-except ImportError as e:
-    st.error(f"⚠️ Critical Module Missing: {e}")
-    st.info("Attempting to fix environment automatically... This may take a minute.")
-    try:
-        # Force install the specific versions we need
-        subprocess.check_call([sys.executable, "-m", "pip", "install", 
-                               "langchain", 
-                               "langchain-community", 
-                               "langchain-groq", 
-                               "pymupdf", 
-                               "faiss-cpu", 
-                               "sentence-transformers"])
-        st.success("✅ Dependencies installed! Please click 'Rerun' or refresh the page.")
+except ImportError:
+    # If we are here, dependencies are missing. 
+    # Check if we already tried to fix it to avoid infinite loops.
+    if "install_attempted" not in st.session_state:
+        st.session_state["install_attempted"] = True
+        st.warning("⚙️ Installing missing dependencies... (Auto-recovering)")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", 
+                                   "langchain", "langchain-community", "langchain-groq", 
+                                   "pymupdf", "faiss-cpu", "sentence-transformers"])
+            st.rerun() # Force reload to pick up new packages
+        except Exception as e:
+            st.error(f"Failed to install dependencies: {e}")
+            st.stop()
+    else:
+        st.error("❌ Dependency Installation Failed unexpectedly. Please check build logs.")
         st.stop()
-    except Exception as install_err:
-        st.error(f"❌ Automatic fix failed: {install_err}")
-        st.write("Current Environment Packages:")
-        result = subprocess.run([sys.executable, "-m", "pip", "list"], capture_output=True, text=True)
-        st.code(result.stdout)
-        st.stop()
-# --------------------------------------------------
+# ----------------------------------
 
 
 from langchain_community.document_loaders import PyMuPDFLoader
