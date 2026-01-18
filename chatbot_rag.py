@@ -4,22 +4,13 @@ import subprocess
 import streamlit as st
 from dotenv import load_dotenv
 
-# --- ROBUST IMPORT & CLEANUP ---
+# --- ROBUST IMPORT SETUP ---
 import sys
 import subprocess
 import streamlit as st
 
-# 1. Clean up potential conflicts
-try:
-    import langchain_classic
-    # If langchain-classic exists, it might be conflicting. Uninstall it.
-    if "cleanup_done" not in st.session_state:
-        st.warning("⚠️ Detected 'langchain-classic'. Removing to prevent conflicts...")
-        subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "langchain-classic"])
-        st.session_state["cleanup_done"] = True
-        st.rerun()
-except ImportError:
-    pass
+# Skip uninstalling to avoid permission errors.
+# We will rely on robust fallbacks instead.
 
 # 2. Try Imports with Fallbacks
 try:
