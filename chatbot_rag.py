@@ -3,7 +3,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -52,7 +52,7 @@ def process_pdf(upload):
     with open(path, "wb") as f:
         f.write(upload.read())
 
-    loader = PyPDFLoader(path)
+    loader = PyMuPDFLoader(path)
     docs = loader.load()
 
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
