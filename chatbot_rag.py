@@ -8,7 +8,7 @@ from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain.callbacks.base import BaseCallbackHandler
@@ -19,7 +19,7 @@ from langchain.callbacks.base import BaseCallbackHandler
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")  # Now this is defined
 
-os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
+# os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1" # Not needed for ChatGroq
 
 # --- Stream Handler for live output ---
 class StreamHandler(BaseCallbackHandler):
@@ -72,12 +72,11 @@ if upload_file and st.session_state.qa_chain is None:
     with st.spinner("Processing PDF and loading model..."):
         retriever = process_pdf(upload_file)
 
-        llm = ChatOpenAI(
+        llm = ChatGroq(
             model_name="llama3-70b-8192",
             temperature=0,
             streaming=True,
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
-            openai_api_base="https://api.groq.com/openai/v1"
+            api_key=os.getenv("OPENAI_API_KEY") # Mapping OPENAI_API_KEY to api_key for Groq
         )
 
         memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
