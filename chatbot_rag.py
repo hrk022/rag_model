@@ -1,82 +1,26 @@
 import os
-import sys
-import subprocess
 import streamlit as st
 from dotenv import load_dotenv
 
-# --- ROBUST IMPORT SETUP ---
-import sys
-import subprocess
-import streamlit as st
-
-# Skip uninstalling to avoid permission errors.
-# We will rely on robust fallbacks instead.
-
-# 2. Try Imports with Fallbacks
-try:
-    import langchain
-    import langchain_community
-    import langchain_groq
-    
-    # Robust Memory Import
-    try:
-        from langchain.memory import ConversationBufferMemory
-    except ImportError:
-        try:
-            from langchain_community.memory import ConversationBufferMemory
-        except ImportError:
-            st.error("❌ Could not import ConversationBufferMemory from langchain or langchain_community")
-            st.stop()
-
-    from langchain_groq import ChatGroq
-    from langchain_community.document_loaders import PyMuPDFLoader
-
-except ImportError as e:
-    # Auto-recovery if major packages are missing
-    if "install_attempted" not in st.session_state:
-        st.session_state["install_attempted"] = True
-        st.warning("⚙️ Installing dependencies... (Auto-recovering)")
-        try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", 
-                                   "langchain", "langchain-community", "langchain-groq", 
-                                   "pymupdf", "faiss-cpu", "sentence-transformers"])
-            st.rerun()
-        except Exception as install_err:
-            st.error(f"Failed to install: {install_err}")
-            st.stop()
-    else:
-        st.error(f"❌ Dependency Error: {e}")
-        st.stop()
-# ----------------------------
-
-
-from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain.callbacks.base import BaseCallbackHandler
 
-
-  # ✅ Import from your Python file
-
+# -------------------- ENV SETUP --------------------
 load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY") 
 
-# Validate API Key
-if not api_key:
-    st.error("❌ API Key is missing! Please set OPENAI_API_KEY in your .env file or Streamlit secrets.")
-    st.stop()
-if not api_key.startswith("gsk_"):
-    st.error("❌ Invalid API Key for Groq! The key must start with `gsk_`. You seem to be using an OpenAI key (`sk-...`). Please get a Groq key from console.groq.com.")
-    st.stop()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_BASE = "https://api.groq.com/openai/v1"
 
-# os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1" # Not needed for ChatGroq
+os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
-# --- Stream Handler for live output ---
+# -------------------- STREAM HANDLER --------------------
 class StreamHandler(BaseCallbackHandler):
     def __init__(self, container):
         self.container = container
@@ -86,90 +30,89 @@ class StreamHandler(BaseCallbackHandler):
         self.text += token
         self.container.markdown(self.text + "▌")
 
-# --- Session State ---
+# -------------------- SESSION STATE --------------------
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 if "qa_chain" not in st.session_state:
     st.session_state.qa_chain = None
 
-if "retriever" not in st.session_state:
-    st.session_state.retriever = None
+# -------------------- SIDEBAR --------------------
+st.sidebar.title("📄 Upload PDF")
+uploaded_file = st.sidebar.file_uploader("Choose a PDF", type="pdf")
 
-# --- Sidebar: Upload PDF ---
-st.sidebar.title("Upload PDF")
-upload_file = st.sidebar.file_uploader("Choose a PDF", type="pdf")
-
-# --- Process Uploaded PDF ---
-def process_pdf(upload):
-    path = os.path.join("temp", upload.name)
+# -------------------- PDF PROCESSING --------------------
+def process_pdf(uploaded_file):
     os.makedirs("temp", exist_ok=True)
-    with open(path, "wb") as f:
-        f.write(upload.read())
+    file_path = os.path.join("temp", uploaded_file.name)
 
-    loader = PyMuPDFLoader(path)
-    docs = loader.load()
+    with open(file_path, "wb") as f:
+        f.write(uploaded_file.read())
 
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-    chunks = text_splitter.split_documents(docs)
+    loader = PyPDFLoader(file_path)
+    documents = loader.load()
 
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    chunks = splitter.split_documents(documents)
+
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+
     vectorstore = FAISS.from_documents(chunks, embedding=embeddings)
 
-    st.sidebar.write("Sample content:", docs[0].page_content[:500])
+    st.sidebar.markdown("**Preview:**")
+    st.sidebar.write(documents[0].page_content[:500])
+
     return vectorstore.as_retriever()
 
-# --- Title ---
-st.title("🤖 Chat with Your PDF (RAG_MODEL)")
+# -------------------- MAIN UI --------------------
+st.title("🤖 Chat with Your PDF (RAG)")
 
-# --- Initialize Chain ---
-if upload_file and st.session_state.qa_chain is None:
-    with st.spinner("Processing PDF and loading model..."):
-        retriever = process_pdf(upload_file)
+# -------------------- INIT CHAIN --------------------
+if uploaded_file and st.session_state.qa_chain is None:
+    with st.spinner("Processing PDF & initializing model..."):
+        retriever = process_pdf(uploaded_file)
 
-        llm = ChatGroq(
-            model_name="llama-3.1-70b-versatile",
-            temperature=0.1, # Using 0.1 to avoid potential issues with 0
+        llm = ChatOpenAI(
+            model_name="llama3-70b-8192",
+            temperature=0,
             streaming=True,
-            api_key=os.getenv("OPENAI_API_KEY") # Mapping OPENAI_API_KEY to api_key for Groq
+            openai_api_key=OPENAI_API_KEY,
+            openai_api_base=OPENAI_API_BASE,
         )
 
-        memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+        memory = ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True,
+        )
 
-        qa_chain = ConversationalRetrievalChain.from_llm(
+        st.session_state.qa_chain = ConversationalRetrievalChain.from_llm(
             llm=llm,
             retriever=retriever,
             memory=memory,
-            return_source_documents=False
+            return_source_documents=False,
         )
 
-        st.session_state.retriever = retriever
-        st.session_state.qa_chain = qa_chain
-
-# --- Chat UI ---
+# -------------------- CHAT --------------------
 if st.session_state.qa_chain:
-    user_query = st.chat_input("Ask something about the PDF...")
+    user_input = st.chat_input("Ask a question about the PDF...")
 
-    if user_query:
-        st.session_state.chat_history.append(("user", user_query))
-        st.chat_message("user").markdown(user_query)
+    if user_input:
+        st.session_state.chat_history.append(("user", user_input))
+        st.chat_message("user").markdown(user_input)
 
         with st.chat_message("assistant"):
-            response_placeholder = st.empty()
-            stream_handler = StreamHandler(response_placeholder)
+            placeholder = st.empty()
+            stream_handler = StreamHandler(placeholder)
 
             result = st.session_state.qa_chain.invoke(
-                {"question": user_query},
-                config={"callbacks": [stream_handler]}
+                {"question": user_input},
+                config={"callbacks": [stream_handler]},
             )
 
-            answer = result.get("answer", "") if isinstance(result, dict) else result
+            answer = result.get("answer", "")
             st.session_state.chat_history.append(("assistant", answer))
 
-    for sender, msg in st.session_state.chat_history[:-1]:
-        st.chat_message(sender).markdown(msg)
-
-
-
-
-
+    for role, message in st.session_state.chat_history[:-1]:
+        st.chat_message(role).markdown(message)
