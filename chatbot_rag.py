@@ -73,8 +73,8 @@ if upload_file and st.session_state.qa_chain is None:
         retriever = process_pdf(upload_file)
 
         llm = ChatGroq(
-            model_name="llama3-70b-8192",
-            temperature=0,
+            model_name="llama-3.1-70b-versatile",
+            temperature=0.1, # Using 0.1 to avoid potential issues with 0
             streaming=True,
             api_key=os.getenv("OPENAI_API_KEY") # Mapping OPENAI_API_KEY to api_key for Groq
         )
