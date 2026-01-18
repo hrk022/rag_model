@@ -4,45 +4,58 @@ import subprocess
 import streamlit as st
 from dotenv import load_dotenv
 
-# --- FORENSIC DIAGNOSTICS ---
+# --- ROBUST IMPORT & CLEANUP ---
 import sys
 import subprocess
 import streamlit as st
 
+# 1. Clean up potential conflicts
 try:
-    # Try the imports cleanly
+    import langchain_classic
+    # If langchain-classic exists, it might be conflicting. Uninstall it.
+    if "cleanup_done" not in st.session_state:
+        st.warning("⚠️ Detected 'langchain-classic'. Removing to prevent conflicts...")
+        subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "langchain-classic"])
+        st.session_state["cleanup_done"] = True
+        st.rerun()
+except ImportError:
+    pass
+
+# 2. Try Imports with Fallbacks
+try:
     import langchain
-    from langchain.memory import ConversationBufferMemory
+    import langchain_community
+    import langchain_groq
+    
+    # Robust Memory Import
+    try:
+        from langchain.memory import ConversationBufferMemory
+    except ImportError:
+        try:
+            from langchain_community.memory import ConversationBufferMemory
+        except ImportError:
+            st.error("❌ Could not import ConversationBufferMemory from langchain or langchain_community")
+            st.stop()
+
     from langchain_groq import ChatGroq
     from langchain_community.document_loaders import PyMuPDFLoader
+
 except ImportError as e:
-    st.title("🚨 Critical Environment Error")
-    st.error(f"Error: {e}")
-    
-    st.subheader("🔍 Environment Forensics")
-    
-    # Check Python Path
-    st.write("**1. Python Path (`sys.path`):**")
-    st.code(sys.path)
-    
-    # Check Installed Packages
-    st.write("**2. Installed Packages (`pip list`):**")
-    try:
-        result = subprocess.run([sys.executable, "-m", "pip", "list"], capture_output=True, text=True)
-        st.code(result.stdout)
-    except Exception as pip_err:
-        st.error(f"Failed to list packages: {pip_err}")
-
-    # Check Specific Package Details
-    st.write("**3. LangChain Details (`pip show langchain`):**")
-    try:
-        result = subprocess.run([sys.executable, "-m", "pip", "show", "langchain"], capture_output=True, text=True)
-        st.code(result.stdout)
-    except:
-        st.code("Could not run pip show")
-
-    st.warning("Please copy the output above and share it with support.")
-    st.stop()
+    # Auto-recovery if major packages are missing
+    if "install_attempted" not in st.session_state:
+        st.session_state["install_attempted"] = True
+        st.warning("⚙️ Installing dependencies... (Auto-recovering)")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", 
+                                   "langchain", "langchain-community", "langchain-groq", 
+                                   "pymupdf", "faiss-cpu", "sentence-transformers"])
+            st.rerun()
+        except Exception as install_err:
+            st.error(f"Failed to install: {install_err}")
+            st.stop()
+    else:
+        st.error(f"❌ Dependency Error: {e}")
+        st.stop()
 # ----------------------------
 
 
